@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tool Website Deployer</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'], mono: ['Fira Code', 'monospace'] },
+                    colors: {
+                        deployer: {
+                            50: '#f4f6f8',
+                            900: '#0f172a',
+                            darkBg: '#090d16',
+                            darkSurface: '#111827',
+                            darkCard: '#1f2937',
+                            darkBorder: '#374151'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(150, 150, 150, 0.3); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(150, 150, 150, 0.5); }
+    </style>
+</head>
+<body class="h-full bg-slate-50 dark:bg-deployer-darkBg text-slate-800 dark:text-slate-100 font-sans antialiased flex flex-col overflow-hidden">
+
+    <div id="app" class="flex flex-col h-screen w-full relative">
+
+        <!-- Top Navigation Bar -->
+        <header class="h-16 border-b border-slate-200 dark:border-deployer-darkBorder bg-white dark:bg-deployer-darkSurface flex items-center justify-between px-6 z-20 shadow-sm">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center text-white shadow-md">
+                    <i class="fa-solid fa-rocket text-lg"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-base tracking-tight flex items-center gap-2">
+                        ToolDeployer <span class="text-xs bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400 px-2 py-0.5 rounded-full font-medium">Instant Cloud Simulation</span>
+                    </h1>
+                    <p class="text-xs text-slate-500 dark:text-slate-400">Build, test, and deploy self-contained HTML/JS tools instantly</p>
+                </div>
+            </div>
+
+            <!-- Action Controls -->
+            <div class="flex items-center gap-3">
+                <button onclick="openTemplatesModal()" class="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium bg-slate-100 dark:bg-deployer-darkCard hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
+                    <i class="fa-solid fa-folder-open text-blue-500"></i>
+                    <span>Templates</span>
+                </button>
+                <button onclick="downloadProjectZip()" class="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium bg-slate-100 dark:bg-deployer-darkCard hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
+                    <i class="fa-solid fa-download text-emerald-500"></i>
+                    <span>Export HTML</span>
+                </button>
+                <button onclick="triggerDeploy()" class="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 transition-all shadow-md shadow-blue-500/20">
+                    <i class="fa-solid fa-cloud-arrow-up"></i>
+                    <span>Deploy Tool</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Workspace Area -->
+        <div class="flex-1 flex flex-col md:flex-row overflow-hidden">
+
+            <!-- Left Panel: Editor & Config -->
+            <div class="w-full md:w-1/2 flex flex-col border-r border-slate-200 dark:border-deployer-darkBorder bg-white dark:bg-deployer-darkSurface">
+                <!-- Tabs Header -->
+                <div class="flex items-center justify-between px-4 border-b border-slate-200 dark:border-deployer-darkBorder bg-slate-50 dark:bg-deployer-darkBg">
+                    <div class="flex items-center gap-2">
+                        <button onclick="switchTab('editor')" id="tabEditor" class="px-4 py-3 text-sm font-semibold border-b-2 border-blue-600 text-blue-600 dark:text-blue-400 flex items-center gap-2">
+                            <i class="fa-solid fa-code"></i> Source Code
+                        </button>
+                        <button onclick="switchTab('config')" id="tabConfig" class="px-4 py-3 text-sm font-medium text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 border-b-2 border-transparent flex items-center gap-2">
+                            <i class="fa-solid fa-sliders"></i> Tool Settings
+                        </button>
+                    </div>
+                    <div class="text-xs text-slate-400 font-mono" id="charCount">0 chars</div>
+                </div>
+
+                <!-- Editor Tab View -->
+                <div id="viewEditor" class="flex-1 flex flex-col p-4 overflow-hidden">
+                    <div class="mb-3 flex items-center justify-between">
+                        <input type="text" id="toolTitle" value="My Awesome Utility Tool" placeholder="Tool Title..." class="bg-slate-100 dark:bg-deployer-darkCard border border-slate-200 dark:border-deployer-darkBorder px-3 py-1.5 rounded-lg text-sm font-medium w-full max-w-xs focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                        <div class="flex gap-2">
+                            <button onclick="formatCode()" title="Clean Layout" class="p-2 bg-slate-100 dark:bg-deployer-darkCard hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg text-xs font-medium transition-colors">
+                                <i class="fa-solid fa-wand-magic-sparkles"></i> Auto Format
+                            </button>
+                        </div>
+                    </div>
+                    <div class="flex-1 relative rounded-xl border border-slate-200 dark:border-deployer-darkBorder overflow-hidden bg-slate-900">
+                        <textarea id="codeEditor" oninput="updatePreview()" class="w-full h-full bg-slate-900 text-slate-100 font-mono text-xs md:text-sm p-4 resize-none border-none focus:outline-none leading-relaxed" spellcheck="false"></textarea>
+                    </div>
+                </div>
+
+                <!-- Config Tab View -->
+                <div id="viewConfig" class="flex-1 p-6 space-y-5 hidden overflow-y-auto">
+                    <div class="space-y-1">
+                        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">Tool Subdomain Name</label>
+                        <div class="flex items-center">
+                            <input type="text" id="toolSlug" value="my-utility-tool" class="bg-slate-50 dark:bg-deployer-darkCard border border-slate-200 dark:border-deployer-darkBorder rounded-l-xl px-3 py-2 text-sm w-full focus:ring-2 focus:ring-blue-500 focus:outline-none font-mono">
+                            <span class="bg-slate-200 dark:bg-slate-700 border border-l-0 border-slate-300 dark:border-slate-600 px-3 py-2 rounded-r-xl text-xs text-slate-500 dark:text-slate-300 font-mono">.tooldrop.app</span>
+                        </div>
+                    </div>
+                    <div class="space-y-1">
+                        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">Short Description</label>
+                        <textarea id="toolDesc" rows="2" class="bg-slate-50 dark:bg-deployer-darkCard border border-slate-200 dark:border-deployer-darkBorder rounded-xl p-3 text-sm w-full focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="Describe what your tool does..."></textarea>
+                    </div>
+                    <div class="space-y-1">
+                        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">Category Tag</label>
+                        <select id="toolCategory" class="bg-slate-50 dark:bg-deployer-darkCard border border-slate-200 dark:border-deployer-darkBorder rounded-xl px-3 py-2 text-sm w-full focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                            <option value="Productivity">Productivity</option>
+                            <option value="Developer">Developer Utility</option>
+                            <option value="Design">Design & Color</option>
+                            <option value="Calculator">Calculator / Math</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Panel: Live Preview -->
+            <div class="w-full md:w-1/2 flex flex-col bg-slate-100 dark:bg-deployer-darkBg">
+                <div class="h-12 border-b border-slate-200 dark:border-deployer-darkBorder bg-white dark:bg-deployer-darkSurface flex items-center justify-between px-4">
+                    <div class="flex items-center gap-2">
+                        <div class="flex gap-1.5">
+                            <div class="w-3 h-3 rounded-full bg-red-400"></div>
+                            <div class="w-3 h-3 rounded-full bg-amber-400"></div>
+                            <div class="w-3 h-3 rounded-full bg-emerald-400"></div>
+                        </div>
+                        <span class="text-xs font-mono text-slate-400 ml-2 bg-slate-100 dark:bg-deployer-darkCard px-2.5 py-1 rounded-md" id="previewUrlDisplay">https://my-utility-tool.tooldrop.app</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button onclick="updatePreview()" title="Refresh Preview" class="p-1.5 text-slate-500 hover:text-slate-800 dark:hover:text-white rounded-lg transition-colors">
+                            <i class="fa-solid fa-rotate-right text-xs"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="flex-1 p-4 flex items-center justify-center">
+                    <div class="w-full h-full bg-white rounded-2xl shadow-md border border-slate-200 dark:border-deployer-darkBorder overflow-hidden flex flex-col">
+                        <iframe id="previewFrame" class="w-full h-full border-none"></iframe>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Templates Modal -->
+    <div id="templatesModal" class="fixed inset-0 bg-black/60 z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-deployer-darkSurface rounded-3xl w-full max-w-2xl border border-slate-200 dark:border-deployer-darkBorder shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <div class="p-5 border-b border-slate-200 dark:border-deployer-darkBorder flex items-center justify-between">
+                <h3 class="text-lg font-semibold flex items-center gap-2">
+                    <i class="fa-solid fa-folder-open text-blue-500"></i> Select a Tool Template
+                </h3>
+                <button onclick="closeTemplatesModal()" class="text-slate-400 hover:text-slate-700 dark:hover:text-white p-1">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+            <div class="p-6 grid grid-cols-1 sm:grid-cols-2 gap-4 max-h-[65vh] overflow-y-auto">
+                <button onclick="loadTemplate('markdown')" class="p-4 rounded-2xl border border-slate-200 dark:border-deployer-darkBorder hover:border-blue-500 dark:hover:border-blue-500 hover:bg-slate-50 dark:hover:bg-deployer-darkCard transition-all text-left space-y-2 group">
+                    <div class="w-10 h-10 rounded-xl bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400 flex items-center justify-center font-semibold text-lg">
+                        <i class="fa-solid fa-file-lines"></i>
+                    </div>
+                    <h4 class="font-semibold text-slate-800 dark:text-white group-hover:text-blue-500 transition-colors">Markdown Live Previewer</h4>
+                    <p class="text-xs text-slate-500 dark:text-slate-400">A clean split-pane markdown note-taking and formatting utility.</p>
+                </button>
+                <button onclick="loadTemplate('pomodoro')" class="p-4 rounded-2xl border border-slate-200 dark:border-deployer-darkBorder hover:border-blue-500 dark:hover:border-blue-500 hover:bg-slate-50 dark:hover:bg-deployer-darkCard transition-all text-left space-y-2 group">
+                    <div class="w-10 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-semibold text-lg">
+                        <i class="fa-solid fa-clock"></i>
+                    </div>
+                    <h4 class="font-semibold text-slate-800 dark:text-white group-hover:text-blue-500 transition-colors">Focus Pomodoro Timer</h4>
+                    <p class="text-xs text-slate-500 dark:text-slate-400">Productivity timer with work/break cycles and custom sound alerts.</p>
+                </button>
+                <button onclick="loadTemplate('palette')" class="p-4 rounded-2xl border border-slate-200 dark:border-deployer-darkBorder hover:border-blue-500 dark:hover:border-blue-500 hover:bg-slate-50 dark:hover:bg-deployer-darkCard transition-all text-left space-y-2 group">
+                    <div class="w-10 h-10 rounded-xl bg-purple-100 dark:bg-purple-900/50 text-purple-600 dark:text-purple-400 flex items-center justify-center font-semibold text-lg">
+                        <i class="fa-solid fa-palette"></i>
+                    </div>
+                    <h4 class="font-semibold text-slate-800 dark:text-white group-hover:text-blue-500 transition-colors">HEX/RGB Color Picker & Generator</h4>
+                    <p class="text-xs text-slate-500 dark:text-slate-400">Generate random palettes and copy color codes instantly.</p>
+                </button>
+                <button onclick="loadTemplate('json')" class="p-4 rounded-2xl border border-slate-200 dark:border-deployer-darkBorder hover:border-blue-500 dark:hover:border-blue-500 hover:bg-slate-50 dark:hover:bg-deployer-darkCard transition-all text-left space-y-2 group">
+                    <div class="w-10 h-10 rounded-xl bg-amber-100 dark:bg-amber-900/50 text-amber-600 dark:text-amber-400 flex items-center justify-center font-semibold text-lg">
+                        <i class="fa-solid fa-code"></i>
+                    </div>
+                    <h4 class="font-semibold text-slate-800 dark:text-white group-hover:text-blue-500 transition-colors">JSON Formatter & Validator</h4>
+                    <p class="text-xs text-slate-500 dark:text-slate-400">Validate, minify, and prettify raw JSON payloads effortlessly.</p>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Deployment Success Modal -->
+    <div id="deployModal" class="fixed inset-0 bg-black/60 z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-deployer-darkSurface rounded-3xl w-full max-w-md border border-slate-200 dark:border-deployer-darkBorder shadow-2xl overflow-hidden p-6 text-center space-y-5 animate-in fade-in zoom-in-95 duration-200">
+            <div class="w-16 h-16 rounded-full bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-2xl mx-auto shadow-inner">
+                <i class="fa-solid fa-check"></i>
+            </div>
+            <div class="space-y-1">
+                <h3 class="text-xl font-bold">Tool Successfully Deployed!</h3>
+                <p class="text-xs text-slate-500 dark:text-slate-400">Your single-file application is now live on our simulated edge network.</p>
+            </div>
+            <div class="bg-slate-100 dark:bg-deployer-darkCard p-3 rounded-xl border border-slate-200 dark:border-deployer-darkBorder font-mono text-xs text-blue-500 break-all" id="deployedUrlResult">
+                https://my-utility-tool.tooldrop.app
+            </div>
+            <div class="flex gap-3 pt-2">
+                <button onclick="closeDeployModal()" class="flex-1 bg-slate-200 dark:bg-deployer-darkCard hover:bg-slate-300 dark:hover:bg-slate-700 py-2.5 rounded-xl text-sm font-medium transition-colors">Close</button>
+                <button onclick="launchLiveTool()" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-xl text-sm font-medium transition-colors shadow-md">Open Live Tool</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Templates Library
+        const templates = {
+            markdown: {
+                title: "Markdown Live Previewer",
+                slug: "markdown-previewer",
+                desc: "A clean split-pane markdown note-taking and formatting utility.",
+                category: "Productivity",
+                code: `<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Markdown Live Previewer</title>
+    <script src="https://cdn.tailwindcss.com"><\\/script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"><\\/script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="h-full bg-slate-50 text-slate-800 flex flex-col">
+    <header class="h-16 border-b border-slate-200 bg-white px-6 flex items-center justify-between">
+        <h1 class="font-bold text-lg flex items-center gap-2 text-blue-600"><i class="fa-solid fa-file-lines"></i> MarkdownNote</h1>
+        <button onclick="clearText()" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 rounded-lg text-xs font-medium transition-colors">Clear</button>
+    </header>
+    <div class="flex-1 flex flex-col md:flex-row overflow-hidden p-4 gap-4">
+        <div class="flex-1 flex flex-col bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+            <div class="bg-slate-100 px-4 py-2 text-xs font-semibold text-slate-500 border-b">Markdown Input</div>
+            <textarea id="editor" oninput="renderMarkdown()" class="flex-1 p-4 resize-none border-none focus:outline-none font-mono text-sm" placeholder="Type markdown here..."># Hello Markdown\n\n- Feature 1: **Bold text**\n- Feature 2: \`Inline code\`\n\n\`\`\`javascript\nconsole.log('Live preview active');\n\`\`\`</textarea>
+        </div>
+        <div class="flex-1 flex flex-col bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+            <div class="bg-slate-100 px-4 py-2 text-xs font-semibold text-slate-500 border-b">Rendered Preview</div>
+            <div id="preview" class="flex-1 p-6 overflow-y-auto prose max-w-none"></div>
+        </div>
+    </div>
+    <script>
+        function renderMarkdown() {
+            const val = document.getElementById('editor').value;
+            document.getElementById('preview').innerHTML = marked.parse(val);
+        }
+        function clearText() {
+            document.getElementById('editor').value = '';
+            renderMarkdown();
+        }
+        renderMarkdown();
+    <\\/script>
+</body>
+</html>`
+            },
+            pomodoro: {
+                title: "Focus Pomodoro Timer",
+                slug: "focus-pomodoro",
+                desc: "Productivity timer with work/break cycles and custom sound alerts.",
+                category: "Productivity",
+                code: `<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Focus Pomodoro Timer</title>
+    <script src="https://cdn.tailwindcss.com"><\\/script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="h-full bg-slate-900 text-white flex flex-col items-center justify-center p-6">
+    <div class="bg-slate-800 p-8 rounded-3xl shadow-2xl border border-slate-700 w-full max-w-md text-center space-y-6">
+        <h1 class="text-xl font-bold flex items-center justify-center gap-2 text-emerald-400"><i class="fa-solid fa-clock"></i> Focus Pomodoro</h1>
+        <div class="flex justify-center gap-2">
+            <button onclick="setMode(25)" id="btnWork" class="px-4 py-1.5 rounded-full text-xs font-semibold bg-emerald-600 text-white transition-all">Work (25m)</button>
+            <button onclick="setMode(5)" id="btnBreak" class="px-4 py-1.5 rounded-full text-xs font-semibold bg-slate-700 text-slate-300 transition-all">Break (5m)</button>
+        </div>
+        <div class="text-6xl font-extrabold font-mono tracking-wider py-4 text-emerald-300" id="timerDisplay">25:00</div>
+        <div class="flex justify-center gap-3">
+            <button onclick="toggleTimer()" id="startBtn" class="bg-emerald-600 hover:bg-emerald-700 px-6 py-2.5 rounded-xl font-semibold text-sm transition-all shadow-md">Start</button>
+            <button onclick="resetTimer()" class="bg-slate-700 hover:bg-slate-600 px-6 py-2.5 rounded-xl font-semibold text-sm transition-all">Reset</button>
+        </div>
+    </div>
+    <script>
+        let timeLeft = 25 * 60;
+        let timerId = null;
+        let isRunning = false;
+
+        function updateDisplay() {
+            const m = Math.floor(timeLeft / 60).toString().padStart(2, '0');
+            const s = (timeLeft % 60).toString().padStart(2, '0');
+            document.getElementById('timerDisplay').innerText = \`\${m}:\${s}\`;
+        }
+
+        function toggleTimer() {
+            const btn = document.getElementById('startBtn');
+            if(isRunning) {
+                clearInterval(timerId);
+                isRunning = false;
+                btn.innerText = 'Start';
+                btn.className = 'bg-emerald-600 hover:bg-emerald-700 px-6 py-2.5 rounded-xl font-semibold text-sm transition-all shadow-md';
+            } else {
+                isRunning = true;
+                btn.innerText = 'Pause';
+                btn.className = 'bg-amber-600 hover:bg-amber-700 px-6 py-2.5 rounded-xl font-semibold text-sm transition-all shadow-md';
+                timerId = setInterval(() => {
+                    if(timeLeft > 0) {
+                        timeLeft--;
+                        updateDisplay();
+                    } else {
+                        clearInterval(timerId);
+                        resetTimer();
+                    }
+                }, 1000);
+            }
+        }
+
+        function setMode(mins) {
+            clearInterval(timerId);
+            isRunning = false;
+            document.getElementById('startBtn').innerText = 'Start';
+            document.getElementById('startBtn').className = 'bg-emerald-600 hover:bg-emerald-700 px-6 py-2.5 rounded-xl font-semibold text-sm transition-all shadow-md';
+            timeLeft = mins * 60;
+            updateDisplay();
+            if(mins === 25) {
+                document.getElementById('btnWork').className = 'px-4 py-1.5 rounded-full text-xs font-semibold bg-emerald-600 text-white transition-all';
+                document.getElementById('btnBreak').className = 'px-4 py-1.5 rounded-full text-xs font-semibold bg-slate-700 text-slate-300 transition-all';
+            } else {
+                document.getElementById('btnBreak').className = 'px-4 py-1.5 rounded-full text-xs font-semibold bg-emerald-600 text-white transition-all';
+                document.getElementById('btnWork').className = 'px-4 py-1.5 rounded-full text-xs font-semibold bg-slate-700 text-slate-300 transition-all';
+            }
+        }
+
+        function resetTimer() {
+            clearInterval(timerId);
+            isRunning = false;
+            document.getElementById('startBtn').innerText = 'Start';
+            document.getElementById('startBtn').className = 'bg-emerald-600 hover:bg-emerald-700 px-6 py-2.5 rounded-xl font-semibold text-sm transition-all shadow-md';
+            timeLeft = 25 * 60;
+            updateDisplay();
+        }
+        updateDisplay();
+    <\\/script>
+</body>
+</html>`
+            },
+            palette: {
+                title: "HEX/RGB Color Picker",
+                slug: "color-picker",
+                desc: "Generate random palettes and copy color codes instantly.",
+                category: "Design",
+                code: `<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HEX/RGB Color Picker</title>
+    <script src="https://cdn.tailwindcss.com"><\\/script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="h-full bg-slate-50 text-slate-800 flex flex-col items-center justify-center p-6">
+    <div class="bg-white p-8 rounded-3xl shadow-xl border border-slate-200 w-full max-w-lg text-center space-y-6">
+        <h1 class="text-xl font-bold flex items-center justify-center gap-2 text-purple-600"><i class="fa-solid fa-palette"></i> Palette Generator</h1>
+        <div class="w-full h-40 rounded-2xl shadow-inner transition-colors duration-300 flex items-center justify-center" id="colorBox">
+            <span class="bg-black/50 text-white px-4 py-2 rounded-full font-mono text-sm backdrop-blur-sm" id="colorCode">#6366f1</span>
+        </div>
+        <button onclick="generateColor()" class="w-full bg-purple-600 hover:bg-purple-700 text-white py-3 rounded-xl font-semibold text-sm transition-all shadow-md">Generate Random Color</button>
+    </div>
+    <script>
+        function generateColor() {
+            const letters = '0123456789ABCDEF';
+            let color = '#';
+            for (let i = 0; i < 6; i++) {
+                color += letters[Math.floor(Math.random() * 16)];
+            }
+            document.getElementById('colorBox').style.backgroundColor = color;
+            document.getElementById('colorCode').innerText = color;
+        }
+        generateColor();
+    <\\/script>
+</body>
+</html>`
+            },
+            json: {
+                title: "JSON Formatter",
+                slug: "json-formatter",
+                desc: "Validate, minify, and prettify raw JSON payloads effortlessly.",
+                category: "Developer",
+                code: `<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JSON Formatter</title>
+    <script src="https://cdn.tailwindcss.com"><\\/script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="h-full bg-slate-50 text-slate-800 flex flex-col p-6">
+    <div class="max-w-2xl mx-auto w-full flex-1 flex flex-col space-y-4">
+        <h1 class="text-xl font-bold flex items-center gap-2 text-amber-600"><i class="fa-solid fa-code"></i> JSON Formatter & Validator</h1>
+        <textarea id="jsonInput" class="w-full h-48 bg-white border border-slate-200 p-4 rounded-xl font-mono text-xs focus:outline-none" placeholder="Paste JSON here..."></textarea>
+        <div class="flex gap-2">
+            <button onclick="formatJson()" class="bg-amber-600 hover:bg-amber-700 text-white px-5 py-2.5 rounded-xl font-semibold text-sm shadow-md">Prettify</button>
+            <button onclick="minifyJson()" class="bg-slate-200 hover:bg-slate-300 px-5 py-2.5 rounded-xl font-semibold text-sm">Minify</button>
+        </div>
+        <pre id="jsonOutput" class="w-full flex-1 bg-slate-900 text-emerald-400 p-4 rounded-xl font-mono text-xs overflow-auto"></pre>
+    </div>
+    <script>
+        function formatJson() {
+            try {
+                const obj = JSON.parse(document.getElementById('jsonInput').value);
+                document.getElementById('jsonOutput').innerText = JSON.stringify(obj, null, 2);
+            } catch(e) {
+                document.getElementById('jsonOutput').innerText = 'Error: ' + e.message;
+            }
+        }
+        function minifyJson() {
+            try {
+                const obj = JSON.parse(document.getElementById('jsonInput').value);
+                document.getElementById('jsonOutput').innerText = JSON.stringify(obj);
+            } catch(e) {
+                document.getElementById('jsonOutput').innerText = 'Error: ' + e.message;
+            }
+        }
+    <\\/script>
+</body>
+</html>`
+            }
+        };
+
+        // DOM elements
+        const codeEditor = document.getElementById('codeEditor');
+        const previewFrame = document.getElementById('previewFrame');
+        const toolTitle = document.getElementById('toolTitle');
+        const toolSlug = document.getElementById('toolSlug');
+        const toolDesc = document.getElementById('toolDesc');
+        const toolCategory = document.getElementById('toolCategory');
+        const previewUrlDisplay = document.getElementById('previewUrlDisplay');
+        const charCount = document.getElementById('charCount');
+
+        // Update Preview Frame function definition (declared before usage)
+        function updatePreview() {
+            const code = codeEditor.value;
+            charCount.innerText = code.length + ' chars';
+            const blob = new Blob([code], { type: 'text/html' });
+            previewFrame.src = URL.createObjectURL(blob);
+            
+            const slug = toolSlug.value.trim() || 'my-utility-tool';
+            previewUrlDisplay.innerText = `https://${slug}.tooldrop.app`;
+        }
+
+        // Tab Switching
+        function switchTab(tab) {
+            const tabEditor = document.getElementById('tabEditor');
+            const tabConfig = document.getElementById('tabConfig');
+            const viewEditor = document.getElementById('viewEditor');
+            const viewConfig = document.getElementById('viewConfig');
+
+            if(tab === 'editor') {
+                tabEditor.className = "px-4 py-3 text-sm font-semibold border-b-2 border-blue-600 text-blue-600 dark:text-blue-400 flex items-center gap-2";
+                tabConfig.className = "px-4 py-3 text-sm font-medium text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 border-b-2 border-transparent flex items-center gap-2";
+                viewEditor.classList.remove('hidden');
+                viewConfig.classList.add('hidden');
+            } else {
+                tabConfig.className = "px-4 py-3 text-sm font-semibold border-b-2 border-blue-600 text-blue-600 dark:text-blue-400 flex items-center gap-2";
+                tabEditor.className = "px-4 py-3 text-sm font-medium text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 border-b-2 border-transparent flex items-center gap-2";
+                viewConfig.classList.remove('hidden');
+                viewEditor.classList.add('hidden');
+            }
+        }
+
+        // Update Preview Frame
+        function updatePreview() {
+            const code = codeEditor.value;
+            charCount.innerText = code.length + ' chars';
+            const blob = new Blob([code], { type: 'text/html' });
+            previewFrame.src = URL.createObjectURL(blob);
+            
+            const slug = toolSlug.value.trim() || 'my-utility-tool';
+            previewUrlDisplay.innerText = `https://${slug}.tooldrop.app`;
+        }
+
+        // Slug updater
+        toolSlug.addEventListener('input', () => {
+            updatePreview();
+        });
+
+        // Format code placeholder action
+        function formatCode() {
+            // Basic spacing cleanup
+            codeEditor.value = codeEditor.value.trim();
+            updatePreview();
+        }
+
+        // Templates Modal
+        function openTemplatesModal() {
+            document.getElementById('templatesModal').classList.remove('hidden');
+        }
+        function closeTemplatesModal() {
+            document.getElementById('templatesModal').classList.add('hidden');
+        }
+
+        function loadTemplate(key) {
+            const t = templates[key];
+            if(!t) return;
+            toolTitle.value = t.title;
+            toolSlug.value = t.slug;
+            toolDesc.value = t.desc;
+            toolCategory.value = t.category;
+            codeEditor.value = t.code;
+            closeTemplatesModal();
+            updatePreview();
+        }
+
+        // Export HTML
+        function downloadProjectZip() {
+            const code = codeEditor.value;
+            const blob = new Blob([code], { type: 'text/html;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = (toolSlug.value.trim() || 'tool') + '.html';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        }
+
+        // Trigger Deploy Simulation
+        let liveDeployUrl = '';
+        function triggerDeploy() {
+            const slug = toolSlug.value.trim() || 'my-utility-tool';
+            liveDeployUrl = `https://${slug}.tooldrop.app`;
+            document.getElementById('deployedUrlResult').innerText = liveDeployUrl;
+            document.getElementById('deployModal').classList.remove('hidden');
+        }
+
+        function closeDeployModal() {
+            document.getElementById('deployModal').classList.add('hidden');
+        }
+
+        function launchLiveTool() {
+            const code = codeEditor.value;
+            const blob = new Blob([code], { type: 'text/html' });
+            window.open(URL.createObjectURL(blob), '_blank');
+            closeDeployModal();
+        }
+
+        // Load default template on startup
+        loadTemplate('markdown');
+    </script>
+</body>
+</html>
